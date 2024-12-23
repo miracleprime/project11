@@ -1,29 +1,47 @@
-package org.example;
-
-import java.io.BufferedReader;
+import SQL.DbCourseSection;
+import org.apache.commons.csv.*;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.Reader;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CSVParser {
-
     public static List<String[]> parseCsv(String filePath, String delimiter) throws IOException {
         List<String[]> records = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] values = line.split(delimiter);
-                records.add(values);
+        CSVFormat format = CSVFormat.DEFAULT.withDelimiter(delimiter.charAt(0)); // Removed .withHeader();
+        String[] headers = null;
+        try (Reader reader = new FileReader(filePath);
+             org.apache.commons.csv.CSVParser parser = new org.apache.commons.csv.CSVParser(reader, format)
+        ){
+            List<CSVRecord> recordsList = parser.getRecords();
+
+            if (recordsList.isEmpty()) {
+                System.err.println("Error: No records found in CSV data, please check the header or the delimiter.");
+                return records;
+            }
+            int rowNum = 0;
+            for(CSVRecord record : recordsList){
+                if(rowNum == 0){
+                    // Save the headers for parsing the student grades later
+                    headers = new String[record.size()];
+                    for (int i = 0; i < record.size(); i++) {
+                        headers[i] = record.get(i);
+                    }
+                } else {
+                    String[] values = new String[record.size()];
+                    for (int i = 0; i < record.size(); i++) {
+                        values[i] = record.get(i);
+                    }
+                    records.add(values);
+                }
+                rowNum++;
             }
         }
         return records;
     }
+
     public static void printTable(List<String[]> data) {
         if (data == null || data.isEmpty()) {
             System.out.println("No data to display.");
@@ -49,8 +67,9 @@ public class CSVParser {
             System.err.println("CSV-данные не содержат достаточно строк");
             return studentGrades;
         }
-        String[] headers = csvData.get(1);
-        for (int i = 3; i < csvData.size(); i++) {
+        // Since the header is not defined by CSVParser, we get it from the csvData list instead
+        String[] headers = csvData.get(0);
+        for (int i = 1; i < csvData.size(); i++) { // start at row 2, since row 1 is the header
             String[] row = csvData.get(i);
             if (row.length < 3) continue;
             String studentName = row[0].trim();
@@ -63,86 +82,70 @@ public class CSVParser {
                         int grade = Integer.parseInt(value);
                         grades.put(header, grade);
                     } catch (NumberFormatException e) {
-                        System.err.println("Пропущено некорректное число: " + value + " для заголовка: "+ header);
+                        System.err.println("Пропущено некорректное число: " + value + " для заголовка: " + header);
                     }
                 }
             }
             studentGrades.put(studentName, grades);
         }
+        System.out.println("Parsed student grades: " + studentGrades); // Log parsed grades
         return studentGrades;
     }
-
-
-    public static Map<String, List<String>> parseCourseData(List<String[]> csvData) {
-        Map<String, List<String>> courseTopics = new HashMap<>();
-        if (csvData == null || csvData.isEmpty()) {
-            System.err.println("Ошибка: CSV-данные пусты или равны null.");
-            return courseTopics;
+    public static Map<String, List<DbCourseSection>> parseCourseData(List<String[]> csvData) {
+        Map<String, List<DbCourseSection>> courseSections = new HashMap<>();
+        if (csvData == null || csvData.isEmpty() || csvData.size() < 2) {
+            System.err.println("Ошибка: CSV-данные пусты или не содержат необходимой информации.");
+            return courseSections;
         }
-        String[] firstRow = csvData.get(0);
 
+        String[] firstRow = csvData.get(0);
         if (firstRow.length < 2 || firstRow[1] == null || firstRow[1].isEmpty()) {
             System.err.println("Ошибка: Первая строка пуста или не содержит информации о теме курса.");
-            return courseTopics;
+            return courseSections;
         }
         String course = firstRow[1].trim();
-        List<String> topics = new ArrayList<>();
-        Pattern pattern = Pattern.compile("(\\d+\\.\\s[\\p{L}\\s\\d.,]+)");
+
+        List<DbCourseSection> sections = new ArrayList<>();
+        System.out.println("Parsed course data: " + course);
+        System.out.println("First row content: " + Arrays.toString(firstRow));
+        // Паттерн для поиска названий разделов и их содержимого
+        Pattern sectionPattern = Pattern.compile("(\\d+\\.\\s[\\p{L}\\s\\d.,]+)(.*)");
+        // Pattern for extracting section tasks (КВ, УПР, ДЗ)
+        Pattern taskPattern = Pattern.compile("((КВ|УПР|ДЗ):\\s[\\p{L}\\s\\d.,]+)");
+        // Parse all data from the first row
         for(int i = 0; i < firstRow.length; i++) {
-            if (firstRow[i] != null && !firstRow[i].trim().isEmpty()) {
-                Matcher matcher = pattern.matcher(firstRow[i]);
-                while (matcher.find()) {
-                    topics.add(matcher.group(1).trim());
+            if(firstRow[i] != null && !firstRow[i].trim().isEmpty()) {
+                Matcher sectionMatcher = sectionPattern.matcher(firstRow[i]);
+                while(sectionMatcher.find()){
+                    String sectionTitle = sectionMatcher.group(1).trim();
+                    String sectionContent = sectionMatcher.group(2).trim();
+                    List<String> tasks = new ArrayList<>();
+                    Matcher taskMatcher = taskPattern.matcher(sectionContent);
+                    while (taskMatcher.find()) {
+                        tasks.add(taskMatcher.group(1).trim());
+                    }
+                    DbCourseSection section = new DbCourseSection(sectionTitle, tasks);
+                    sections.add(section);
+                    System.out.println("Parsed sections: " + sections);
+                    System.out.println("  Parsed section: " + sectionTitle + ", Tasks: " + tasks);
                 }
             }
         }
-        courseTopics.put(course, topics);
-
-        return courseTopics;
+        courseSections.put(course, sections);
+        System.out.println("Parsed course data: " + courseSections); // Log parsed data
+        return courseSections;
     }
 
+    public static List<String> parseCourses(String coursesString) {
+        List<String> courses = new ArrayList<>();
+        String[] lines = coursesString.split("\n"); // Split string by newline
 
-
-    public static void main(String[] args) {
-        String filePath = "C:\\Users\\krubl\\OneDrive\\Рабочий стол\\ss.csv";
-        String delimiter = ";";
-
-        try {
-            List<String[]> csvData = parseCsv(filePath, delimiter);
-            System.out.println("-----------------------------------\nИсходные данные:\n-----------------------------------");
-            printTable(csvData);
-
-            Map<String, Map<String, Integer>> studentGrades = parseStudentGrades(csvData);
-            System.out.println("\n-----------------------------------\nОценки студентов:\n-----------------------------------");
-            if (studentGrades.isEmpty()) {
-                System.out.println("Оценки студентов не найдены.");
-            } else {
-                for (Map.Entry<String, Map<String, Integer>> entry : studentGrades.entrySet()) {
-                    System.out.println("Студент: " + entry.getKey());
-                    for (Map.Entry<String, Integer> gradeEntry : entry.getValue().entrySet()) {
-                        System.out.println("  " + gradeEntry.getKey() + ": " + gradeEntry.getValue());
-                    }
-                }
+        for(String line : lines) {
+            String trimmedLine = line.trim();
+            if (!trimmedLine.isEmpty()) {
+                courses.add(trimmedLine);
             }
-            Map<String, List<String>> courseData = parseCourseData(csvData);
-            System.out.println("\n-----------------------------------\nДанные курса:\n-----------------------------------");
-            if (courseData.isEmpty()) {
-                System.out.println("Данные курса не найдены.");
-            } else {
-                for (Map.Entry<String, List<String>> entry : courseData.entrySet()) {
-                    System.out.println("Курс: " + entry.getKey());
-                    System.out.println("Темы: " + entry.getValue());
-                }
-            }
-
-
-        } catch (IOException e) {
-            System.err.println("Ошибка при чтении файла: " + e.getMessage());
-            e.printStackTrace();
         }
-        catch (Exception e){
-            System.err.println("Произошла непредвиденная ошибка: " + e.getMessage());
-            e.printStackTrace();
-        }
+        return courses;
     }
 }

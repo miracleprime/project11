@@ -8,10 +8,8 @@ import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.users.User;
 import com.vk.api.sdk.objects.users.UserFull;
-import com.vk.api.sdk.objects.users.responses.GetResponse;
 import com.vk.api.sdk.queries.users.UsersSearchQuery;
 import com.vk.api.sdk.queries.users.UsersGetQuery;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,27 +30,26 @@ public class VkRepository {
         actor = new UserActor(APP_ID, CODE);
     }
 
-    public List<?> getUsersByFirstNameLastName(String firstName, String lastName) throws ApiException, ClientException {
+    public List<User> getUsersByFirstNameLastName(String firstName, String lastName) throws ApiException, ClientException {
         if (firstName == null || firstName.isEmpty() || lastName == null || lastName.isEmpty()) {
             throw new IllegalArgumentException("Имя и фамилия не могут быть пустыми или null.");
         }
-
         try {
             UsersSearchQuery query = vk.users().search(actor)
                     .q(firstName + " " + lastName)
                     .count(5);
-
-            List<UserFull> users = query.execute().getItems();
-
-            return users != null ? users : Collections.emptyList();
-
+            List<UserFull> usersFull = query.execute().getItems();
+            if (usersFull == null || usersFull.isEmpty()) {
+                return Collections.emptyList();
+            }
+            return  usersFull.stream()
+                    .map(userFull -> (User) userFull)
+                    .collect(Collectors.toList());
         } catch (ApiException | ClientException e) {
-            System.err.println("Ошибка при получении данных: " + e.getMessage());
             throw e;
         }
     }
-
-    public List<UserFull> getUsersByName(String name) throws ApiException, ClientException {
+    public List<User> getUsersByName(String name) throws ApiException, ClientException {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Имя не может быть пустым или null.");
         }
@@ -61,32 +58,32 @@ public class VkRepository {
             UsersSearchQuery query = vk.users().search(actor)
                     .q(name)
                     .count(50);
+            List<UserFull> usersFull = query.execute().getItems();
+            if (usersFull == null || usersFull.isEmpty()) {
+                return Collections.emptyList();
+            }
 
-            List<UserFull> users = query.execute().getItems();
-
-            return users != null ? users : Collections.emptyList();
+            return  usersFull.stream()
+                    .map(userFull -> (User) userFull)
+                    .collect(Collectors.toList());
         } catch (ApiException | ClientException e) {
-            System.err.println("Ошибка при получении данных: " + e.getMessage());
             throw e;
         }
     }
-
-    public List<? extends Object> getUsersByIds(List<Integer> ids) throws ApiException, ClientException {
+    public List<User> getUsersByIds(List<Integer> ids) throws ApiException, ClientException {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("Список ID не может быть пустым или null.");
         }
-
         try {
             UsersGetQuery query = vk.users().get(actor)
                     .userIds(ids.stream().map(Object::toString).collect(Collectors.joining(",")));
-
-            List<GetResponse> users = query.execute();
-
-            return users != null ? users : Collections.emptyList();
+            return query.execute().stream()
+                    .map(response -> (User) response)
+                    .collect(Collectors.toList());
         } catch (ApiException | ClientException e) {
-            System.err.println("Ошибка при получении данных по ID: " + e.getMessage());
             throw e;
         }
     }
-
 }
+
+

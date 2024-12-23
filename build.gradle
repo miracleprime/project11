@@ -10,9 +10,8 @@ repositories {
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
     implementation 'com.vk.api:sdk:1.0.14'
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
     implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.2'
@@ -22,10 +21,16 @@ dependencies {
     implementation 'commons-io:commons-io:2.11.0'
     implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.0'
     implementation 'com.google.code.gson:gson:2.10'
-    implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.39.4.1'
+    implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.44.1.0'
     implementation group: 'com.j256.ormlite', name: 'ormlite-jdbc', version: '6.1'
     implementation group: 'jfree', name: 'jfreechart', version: '1.0.13'
+    implementation 'org.apache.commons:commons-csv:1.10.0'
+    implementation 'com.j256.ormlite:ormlite-jdbc:5.1'
+    implementation 'com.j256.ormlite:ormlite-core:5.1'
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+
 }
+
 
 tasks.test {
     useJUnitPlatform()
