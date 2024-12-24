@@ -31,3 +31,4 @@ public class DbCourse {
         this.name = name;
     }
 }
+

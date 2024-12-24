@@ -88,7 +88,7 @@ public class CSVParser {
             }
             studentGrades.put(studentName, grades);
         }
-        System.out.println("Parsed student grades: " + studentGrades); // Log parsed grades
+        System.out.println("Разобраны оценки учащихся: " + studentGrades); // Log parsed grades
         return studentGrades;
     }
     public static Map<String, List<DbCourseSection>> parseCourseData(List<String[]> csvData) {

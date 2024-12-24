@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DatabaseHelper {
-    private static final String DATABASE_URL = "jdbc:sqlite:final411123.db";
+    private static final String DATABASE_URL = "jdbc:sqlite:final411123!fin.db";
 
     private ConnectionSource connectionSource;
     private Dao<DbCourse, Integer> courseDao;

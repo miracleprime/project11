@@ -2,7 +2,6 @@ package SQL;
 
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
-@DatabaseTable(tableName = "users")
 public class DbUser {
     @DatabaseField(id= true)
     private int id;
